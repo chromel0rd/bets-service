@@ -1,0 +1,38 @@
+version: "3.9"
+services:
+  db:
+    image: postgres:15
+    container_name: bets-api-db
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: bets_api_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build: .
+    command: sh -c "npx prisma migrate deploy && npx prisma db seed && pnpm run dev"
+    container_name: bets-api-app
+    environment:
+      - DATABASE_URL=postgres://postgres:postgres@db:5432/bets_api_db
+      - EXTERNAL_API_URL=https://bets.tgapps.cloud/api
+      - EXTERNAL_SECRET_KEY=c33367701511b4f6020ec61ded352059
+      - ADMIN_TOKEN=supersecrettoken123
+    ports:
+      - "3000:3000"
+    # command: sh -c "npx prisma migrate deploy && pnpm exec ts-node prisma/seed.ts && pnpm run dev"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  db-data:
